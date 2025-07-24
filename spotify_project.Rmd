@@ -1,0 +1,143 @@
+---
+title: "Top Spotify Songs of 2023"
+author: "Irisa Le"
+date: "2025-07-19"
+output: html_document
+---
+
+## Load Data and Libraries
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+```{r}
+songs <- read.csv("spotify-2023.csv", encoding='ISO-8859-2')
+```
+
+```{r}
+songs$artist_name
+```
+
+```{r}
+# Top 6 rows
+head(songs)
+```
+
+```{r}
+# Last 6 rows
+tail(songs)
+```
+
+```{r}
+# clean data with ._ and artist.s.name -> artist name
+colnames(songs)
+```
+
+```{r}
+# clean data: make streams, in_shazam_charts, and in_deezer_playlists of integer class,
+summary(songs)
+```
+
+### Data Cleaning
+#### Rename unclear columns
+```{r}
+songs <- rename(songs, artist_name = artist.s._name,
+                danceability_pct = danceability_., valence_pct = valence_., energy_pct = energy_.,            
+                acousticness_pct = acousticness_., instrumentalness_pct = instrumentalness_., 
+                liveness_pct = liveness_., speechiness_pct = speechiness_.)
+```
+
+```{r}
+colnames(songs)
+```
+#### Convert data types of columns that should be integer
+```{r}
+songs <- songs %>%
+  mutate(streams = as.integer(streams))
+```
+
+#### Check for missing values (NA) or empty character strings
+```{r}
+# check if any column has NA values
+# only streams column has NA values
+colSums(is.na(songs))
+```
+
+```{r}
+# check for blank character values ""
+# 'key' and 'in_shazam_charts'
+sapply(songs, function(col) any(col == "", na.rm = TRUE))
+```
+
+```{r}
+# set "" to NA
+# check how many NAs there are now
+songs[songs == ""] <- NA
+colSums(is.na(songs))
+```
+
+```{r}
+# convert 'streams' and 'in_shazam_charts' columns to be of integer class, and keep NAs
+songs <- songs %>%
+  mutate(in_shazam_charts = as.integer(in_shazam_charts),
+         streams = as.integer(streams))
+```
+
+```{r}
+summary(songs)
+```
+
+### Exploratory Data Analysis
+```{r}
+summary(artist_song_sum)
+```
+
+```{r}
+artist_song_sum <- songs %>%
+  group_by(artist_name) %>%
+  summarise(total_songs = n()) %>%
+  arrange(desc(total_songs))
+
+artist_song_num_barplot <- ggplot(data=artist_song_sum, aes(x=artist_name, y=total_songs)) +
+                            geom_bar(stat="identity") +
+                            coord_flip()
+
+artist_song_num_barplot
+```
+
+### Multiple Linear Regression: Streams
+```{r}
+# remove rows with NAs for multi-linear regression using streams
+songs_no_nas <- na.rm()
+```
+
+### Multiple Linear Regression: Placing
+
+
+```{r}
+songs$artist_name
+```
+
+```{r}
+songs %>%
+  filter(grepl("[^A-Za-z0-9\\s]", artist_name))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
