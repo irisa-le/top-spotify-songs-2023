@@ -112,11 +112,12 @@ write.csv(songs, "spotify-2023-partially-cleaned.csv", row.names = FALSE)
 
 ### Import cleaned data
 ```{r}
-songs_clean <- read.csv("spotify-2023-final.csv", encoding = "UTF-8")
+songs_clean <- read.csv("spotify-2023-finalclean.csv", encoding="UTF-8")
 head(songs_clean)
+View("spotify-2023-finalclean.csv")
 ```
 
-#### Compare dataset dimensions
+#### Compare dimensions of original and clean datasets
 ```{r}
 dim(songs)
 dim(songs_clean)
@@ -124,24 +125,56 @@ dim(songs_clean)
 
 #### Compare NAs
 ```{r}
-sum(is.na(songs$key))         # 95
-sum(is.na(songs_clean$key))   # 0
-sum(is.na(songs_clean$released_month))
 colSums(is.na(songs_clean))
-View('spotify-2023-final.csv')
 ```
 
 ### Exploratory Data Analysis
 #### Barplot for songs released over the months
 ```{r}
-summary(artist_song_sum)
+month_names <- c("January", "February", "March", "April", "May", "June", "July", 
+                 "August", "September", "October", "November", "December")
+
+songs_per_month <- ggplot(songs_clean, aes(x=factor(released_month))) +
+                    geom_bar(fill="darkgreen") +
+                    scale_x_discrete(labels = month_names) +
+                    labs(x="Month of Release", y="Count", title="Song Releases by Month")  +
+                    coord_flip() +
+                    theme_minimal()
+                    
+songs_per_month
 ```
 
+#### Barplot for years songs were released
 ```{r}
-songs_per_month <- ggplot(songs_clean, aes(x=factor(released_month))) +
-                    geom_bar() +
-                    labs(x="Month of Release", y="Count", title="Song Releases by Month")
-songs_per_month
+year_range <- min(songs_clean$released_year):2023
+
+songs_per_year <- ggplot(songs_clean, aes(x=released_year)) +
+                    geom_bar(fill="darkgreen") +
+                    scale_x_discrete(labels = year_range) +
+                    labs(x="Month of Release", y="Count", title="Song Releases by Year") +
+                    theme_minimal()
+
+songs_per_year+coord_flip()
+```
+
+#### Barplot: Top 20 Artists by Number of Songs
+```{r}
+top_artists <- songs_clean %>%
+  count(artist_name) %>%
+  top_n(20, n)  
+
+ggplot(top_artists, aes(x = reorder(artist_name, n), y = n)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  labs(x = "Artist", y = "Number of Songs", title = "Top 20 Artists by Number of Songs") +
+  coord_flip() +
+  theme_minimal()
+```
+
+###
+
+
+```{r}
+colnames(songs_clean)
 ```
 
 ### Multiple Linear Regression: Streams
