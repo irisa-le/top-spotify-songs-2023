@@ -9,6 +9,7 @@ output: html_document
 ```{r}
 library(ggplot2)
 library(dplyr)
+library(GGally)
 ```
 
 ## Load data
@@ -129,6 +130,22 @@ colSums(is.na(songs_clean))
 ```
 
 ### Exploratory Data Analysis
+#### Correlation matrix
+```{r}
+songs_clean_subset <- songs_clean[, c("streams", "artist_count", "bpm", "danceability_pct", "energy_pct", "valence_pct", "acousticness_pct", "instrumentalness_pct", "liveness_pct", "speechiness_pct")]
+
+corrplot(cor(songs_clean_subset))
+```
+
+#### Pair plot
+```{r}
+# each box in upper half diagonal of grid displays the scatter plot
+# between two variables, which shows the dispersion of data
+# each box in lower half diagonal gives scatter plot with a line of the
+# best fit between two variables which shows the dispersion of data around the line
+pairs(songs_clean_subset, pch=1, col = 'gray', lower.panel=panel.smooth)
+```
+
 #### Barplot for songs released over the months
 ```{r}
 month_names <- c("January", "February", "March", "April", "May", "June", "July", 
@@ -157,21 +174,43 @@ songs_per_year <- ggplot(songs_clean, aes(x=released_year)) +
 songs_per_year+coord_flip()
 ```
 
-#### Barplot: Top 20 Artists by Number of Songs
+#### Barplot: Top 10 Artists by Number of Songs
+Shows only the top N artists based on the number of songs they have
 ```{r}
-top_artists <- songs_clean %>%
+top_artists_numsongs <- songs_clean %>%
   count(artist_name) %>%
-  top_n(20, n)  
+  top_n(10, n)  
 
-ggplot(top_artists, aes(x = reorder(artist_name, n), y = n)) +
-  geom_bar(stat = "identity", fill = "darkgreen") +
-  labs(x = "Artist", y = "Number of Songs", title = "Top 20 Artists by Number of Songs") +
-  coord_flip() +
+ggplot(top_artists_numsongs, aes(x = reorder(artist_name, n), y = n)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Artist", y = "Number of Songs", title = "Top 10 Artists by Number of Top Songs") +
+  scale_fill_brewer(palette = "Set3") +  
+  coord_flip() +  
   theme_minimal()
 ```
+#### Barplot: Top 10 Artists by Number of Streams
+```{r}
+# Get the total streams per artist and select the top 10
+top_artists_streams <- songs_clean %>%
+  group_by(artist_name) %>%
+  summarise(total_streams = sum(streams)) %>%  # Sum streams for each artist
+  top_n(10, total_streams)  # Keep the top 10 artists by total streams
 
-###
+# Create the bar plot
+ggplot(top_artists_streams, aes(x = reorder(artist_name, total_streams), y = total_streams, fill = artist_name)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Artist", y = "Total Streams", title = "Top 10 Artists by Total Streams") +
+  scale_fill_brewer(palette = "Set3") +  
+  coord_flip() +  
+  theme_minimal() +
+  theme(legend.position = "none") 
+```
 
+#### Scatterplot
+```{r}
+ggplot(songs_clean, aes(x=instrumentalness_pct, y=streams)) +
+  geom_point()
+```
 
 ```{r}
 colnames(songs_clean)
