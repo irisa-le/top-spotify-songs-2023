@@ -9,7 +9,9 @@ output: html_document
 ```{r}
 library(ggplot2)
 library(dplyr)
+library(corrplot)
 library(GGally)
+library(patchwork)
 ```
 
 ## Load data
@@ -115,7 +117,15 @@ write.csv(songs, "spotify-2023-partially-cleaned.csv", row.names = FALSE)
 ```{r}
 songs_clean <- read.csv("spotify-2023-finalclean.csv", encoding="UTF-8")
 head(songs_clean)
-View("spotify-2023-finalclean.csv")
+```
+
+#### Create Top X Categories
+```{r}
+
+```
+
+```{r}
+unique(songs_clean$in_spotify_charts)
 ```
 
 #### Compare dimensions of original and clean datasets
@@ -130,13 +140,6 @@ colSums(is.na(songs_clean))
 ```
 
 ### Exploratory Data Analysis
-#### Correlation matrix
-```{r}
-songs_clean_subset <- songs_clean[, c("streams", "artist_count", "bpm", "danceability_pct", "energy_pct", "valence_pct", "acousticness_pct", "instrumentalness_pct", "liveness_pct", "speechiness_pct")]
-
-corrplot(cor(songs_clean_subset))
-```
-
 #### Pair plot
 ```{r}
 # each box in upper half diagonal of grid displays the scatter plot
@@ -144,6 +147,13 @@ corrplot(cor(songs_clean_subset))
 # each box in lower half diagonal gives scatter plot with a line of the
 # best fit between two variables which shows the dispersion of data around the line
 pairs(songs_clean_subset, pch=1, col = 'gray', lower.panel=panel.smooth)
+```
+
+#### Correlation matrix
+```{r}
+songs_clean_subset <- songs_clean[, c("streams", "artist_count", "bpm", "danceability_pct", "energy_pct", "valence_pct", "acousticness_pct", "instrumentalness_pct", "liveness_pct", "speechiness_pct")]
+
+corrplot(cor(songs_clean_subset))
 ```
 
 #### Barplot for songs released over the months
@@ -168,7 +178,7 @@ year_range <- min(songs_clean$released_year):2023
 songs_per_year <- ggplot(songs_clean, aes(x=released_year)) +
                     geom_bar(fill="darkgreen") +
                     scale_x_discrete(labels = year_range) +
-                    labs(x="Month of Release", y="Count", title="Song Releases by Year") +
+                    labs(x="Years of Release (1930-2023)", y="Count", title="Song Releases by Year") +
                     theme_minimal()
 
 songs_per_year+coord_flip()
@@ -188,6 +198,7 @@ ggplot(top_artists_numsongs, aes(x = reorder(artist_name, n), y = n)) +
   coord_flip() +  
   theme_minimal()
 ```
+
 #### Barplot: Top 10 Artists by Number of Streams
 ```{r}
 # Get the total streams per artist and select the top 10
@@ -201,15 +212,52 @@ ggplot(top_artists_streams, aes(x = reorder(artist_name, total_streams), y = tot
   geom_bar(stat = "identity") +
   labs(x = "Artist", y = "Total Streams", title = "Top 10 Artists by Total Streams") +
   scale_fill_brewer(palette = "Set3") +  
-  coord_flip() +  
+  coord_flip() +
   theme_minimal() +
   theme(legend.position = "none") 
 ```
 
 #### Scatterplot
 ```{r}
-ggplot(songs_clean, aes(x=instrumentalness_pct, y=streams)) +
-  geom_point()
+# Fits a linear model and displays confidence interval
+scatterplot1 <- ggplot(songs_clean, aes(x=acousticness_pct, y=energy_pct)) +
+  geom_point() +
+  geom_smooth(method=lm) +
+  labs(x="Acousticness Percentage", y="Energy Percentage") +
+  theme_minimal()
+
+scatterplot2 <- ggplot(songs_clean, aes(x=valence_pct, y=danceability_pct)) +
+  geom_point() +
+  geom_smooth(method=lm) +
+  labs(x="Valence Percentage", y="Danceability Percentage") +
+  theme_minimal()
+
+scatterplot3 <- ggplot(songs_clean, aes(x=energy_pct, y=acousticness_pct)) +
+  geom_point() +
+  geom_smooth(method=lm) +
+  labs(x="Energy Percentage", y="Acousticness Percentage") +
+  theme_minimal()
+
+scatterplot4 <- ggplot(songs_clean, aes(x=danceability_pct, y=valence_pct)) +
+  geom_point() +
+  geom_smooth(method=lm) +
+  labs(x="Danceability Percentage", y="Valence Percentage") +
+  theme_minimal()
+
+(scatterplot1 | scatterplot2) / 
+(scatterplot3 | scatterplot4)
+```
+
+
+```{r}
+ggplot(songs_clean, aes(x=artist_count, y=streams)) +
+  geom_point() +
+  labs(x = "Artist Count", y = "Total Streams", title = "Streams by Artist Count") +
+  theme_minimal()
+```
+
+```{r}
+unique(songs_clean$in_spotify_charts)
 ```
 
 ```{r}
@@ -218,21 +266,12 @@ colnames(songs_clean)
 
 ### Multiple Linear Regression: Streams
 ```{r}
-# remove rows with NAs for multi-linear regression using streams
 songs_no_nas <- na.rm()
 ```
 
 ### Multiple Linear Regression: Placing
 
 
-```{r}
-songs$artist_name
-```
-
-```{r}
-songs %>%
-  filter(grepl("[^A-Za-z0-9\\s]", artist_name))
-```
 
 
 
