@@ -119,11 +119,6 @@ songs_clean <- read.csv("spotify-2023-finalclean.csv", encoding="UTF-8")
 head(songs_clean)
 ```
 
-#### Create Top X Categories
-```{r}
-
-```
-
 ```{r}
 unique(songs_clean$in_spotify_charts)
 ```
@@ -156,8 +151,9 @@ songs_clean_subset <- songs_clean[, c("streams", "artist_count", "bpm", "danceab
 corrplot(cor(songs_clean_subset))
 ```
 
-#### Barplot for songs released over the months
+#### Barplots for songs released by year and month
 ```{r}
+# Barplot: Song Releases by Month
 month_names <- c("January", "February", "March", "April", "May", "June", "July", 
                  "August", "September", "October", "November", "December")
 
@@ -168,53 +164,51 @@ songs_per_month <- ggplot(songs_clean, aes(x=factor(released_month))) +
                     coord_flip() +
                     theme_minimal()
                     
-songs_per_month
-```
 
-#### Barplot for years songs were released
-```{r}
+
+# Barplot: Song Releases by Year
 year_range <- min(songs_clean$released_year):2023
 
 songs_per_year <- ggplot(songs_clean, aes(x=released_year)) +
                     geom_bar(fill="darkgreen") +
                     scale_x_discrete(labels = year_range) +
                     labs(x="Years of Release (1930-2023)", y="Count", title="Song Releases by Year") +
+                    coord_flip()+
                     theme_minimal()
 
-songs_per_year+coord_flip()
+songs_per_year | songs_per_month
 ```
 
 #### Barplot: Top 10 Artists by Number of Songs
 Shows only the top N artists based on the number of songs they have
 ```{r}
+# Barplot: Top 10 Artists by Number of Songs
 top_artists_numsongs <- songs_clean %>%
   count(artist_name) %>%
   top_n(10, n)  
 
-ggplot(top_artists_numsongs, aes(x = reorder(artist_name, n), y = n)) +
-  geom_bar(stat = "identity") +
+top10_numsongs <- ggplot(top_artists_numsongs, aes(x = reorder(artist_name, n), y = n)) +
+  geom_bar(stat="identity", fill="darkgreen") +
   labs(x = "Artist", y = "Number of Songs", title = "Top 10 Artists by Number of Top Songs") +
-  scale_fill_brewer(palette = "Set3") +  
   coord_flip() +  
   theme_minimal()
-```
 
-#### Barplot: Top 10 Artists by Number of Streams
-```{r}
-# Get the total streams per artist and select the top 10
+# Barplot: Top 10 Artists by Number of Streams
+## Get the total streams per artist and select the top 10
 top_artists_streams <- songs_clean %>%
   group_by(artist_name) %>%
   summarise(total_streams = sum(streams)) %>%  # Sum streams for each artist
   top_n(10, total_streams)  # Keep the top 10 artists by total streams
 
-# Create the bar plot
-ggplot(top_artists_streams, aes(x = reorder(artist_name, total_streams), y = total_streams, fill = artist_name)) +
-  geom_bar(stat = "identity") +
-  labs(x = "Artist", y = "Total Streams", title = "Top 10 Artists by Total Streams") +
-  scale_fill_brewer(palette = "Set3") +  
+## Create the bar plot
+top10_numstreams <- ggplot(top_artists_streams, aes(x = reorder(artist_name, total_streams), y = total_streams, fill = artist_name)) +
+  geom_bar(stat = "identity", fill="darkgreen") +
+  labs(x="Artist", y = "Total Streams", title = "Top 10 Artists by Total Streams") +
   coord_flip() +
   theme_minimal() +
-  theme(legend.position = "none") 
+  theme(legend.position = "none")
+
+top10_numsongs | top10_numstreams
 ```
 
 #### Scatterplot
@@ -257,16 +251,12 @@ ggplot(songs_clean, aes(x=artist_count, y=streams)) +
 ```
 
 ```{r}
-unique(songs_clean$in_spotify_charts)
-```
-
-```{r}
 colnames(songs_clean)
 ```
 
 ### Multiple Linear Regression: Streams
 ```{r}
-songs_no_nas <- na.rm()
+mlr_model <- lm(streams ~ (bpm * key * mode * danceability_pct * valence_pct * energy_pct * acousticness_pct * instrumentalness_pct * liveness_pct * speechiness_pct)), data=songs_clean)
 ```
 
 ### Multiple Linear Regression: Placing
