@@ -137,6 +137,8 @@ colSums(is.na(songs_clean))
 ### Exploratory Data Analysis
 #### Pair plot
 ```{r}
+songs_clean_subset <- songs_clean[, c("streams", "artist_count", "bpm", "danceability_pct", "energy_pct", "valence_pct", "acousticness_pct", "instrumentalness_pct", "liveness_pct", "speechiness_pct")]
+
 # each box in upper half diagonal of grid displays the scatter plot
 # between two variables, which shows the dispersion of data
 # each box in lower half diagonal gives scatter plot with a line of the
@@ -146,8 +148,6 @@ pairs(songs_clean_subset, pch=1, col = 'gray', lower.panel=panel.smooth)
 
 #### Correlation matrix
 ```{r}
-songs_clean_subset <- songs_clean[, c("streams", "artist_count", "bpm", "danceability_pct", "energy_pct", "valence_pct", "acousticness_pct", "instrumentalness_pct", "liveness_pct", "speechiness_pct")]
-
 corrplot(cor(songs_clean_subset))
 ```
 
@@ -254,13 +254,21 @@ ggplot(songs_clean, aes(x=artist_count, y=streams)) +
 colnames(songs_clean)
 ```
 
-### Multiple Linear Regression: Streams
+### Model 1: Multiple Linear Regression with Main Effects Only
 ```{r}
-mlr_model <- lm(streams ~ (bpm * key * mode * danceability_pct * valence_pct * energy_pct * acousticness_pct * instrumentalness_pct * liveness_pct * speechiness_pct)), data=songs_clean)
+lm1 <- lm(log(streams) ~ bpm + key + mode + danceability_pct + valence_pct + energy_pct + acousticness_pct + instrumentalness_pct + liveness_pct + speechiness_pct, data=songs_clean)
+summary(lm1)
 ```
 
-### Multiple Linear Regression: Placing
+```{r}
+anova(lm1)
+```
 
+### Model 2: Multiple Linear Regression with Select Interactions
+```{r}
+lm2 <- lm(log(streams) ~ bpm + key + mode + (acousticness_pct * energy_pct) + (valence_pct * danceability_pct) + (speechiness_pct:danceability_pct) + (valence_pct:energy_pct) + (bpm:energy_pct) + instrumentalness_pct + liveness_pct + speechiness_pct, data=songs_clean)
+summary(lm2)
+```
 
 
 
