@@ -10,8 +10,10 @@ output: html_document
 library(ggplot2)
 library(dplyr)
 library(corrplot)
-library(GGally)
-library(patchwork)
+library(GGally) # correlation heat matrix
+library(patchwork) # organize visualization output
+library(car) # inverse response plot
+library(MASS) # box-cox transformation
 ```
 
 ## Load data
@@ -253,15 +255,121 @@ ggplot(songs_clean, aes(x=artist_count, y=streams)) +
 ```{r}
 colnames(songs_clean)
 ```
+## Modeling
+### Explore original distribution of y (streams)
+```{r}
+y <- songs_clean$streams
+par(mfrow=c(1,3))
+plot(density(y, bw="SJ", kern="gaussian"), type="l",
+main="Gaussian kernel density estimate", xlab="streams")
+boxplot(y, ylab="streams")
+qqnorm(y, ylab="streams")
+```
 
 ### Model 1: Multiple Linear Regression with Main Effects Only
 ```{r}
-lm1 <- lm(log(streams) ~ bpm + key + mode + danceability_pct + valence_pct + energy_pct + acousticness_pct + instrumentalness_pct + liveness_pct + speechiness_pct, data=songs_clean)
+lm1 <- lm(streams ~ bpm + key + mode + danceability_pct + valence_pct + energy_pct + acousticness_pct + instrumentalness_pct + liveness_pct + speechiness_pct, data=songs_clean)
 summary(lm1)
 ```
 
 ```{r}
-anova(lm1)
+par(mfrow=c(2,2))
+plot(lm1)
+```
+
+### Consider transformation of response:
+#### Inverse Response Plot
+```{r}
+par(mfrow=c(1,1))
+inverseResponsePlot(lm1, key=TRUE)
+```
+
+#### Power Transformation of y
+```{r}
+bc <- powerTransform(y ~ 1)
+summary(bc)
+```
+
+### Model 2: log(response) only
+```{r}
+lm2 <- lm(log(streams) ~ bpm + key + mode + danceability_pct + valence_pct + energy_pct + acousticness_pct + instrumentalness_pct + liveness_pct + speechiness_pct, data=songs_clean)
+summary(lm2)
+```
+
+#### Diagnostic plots 
+```{r}
+par(mfrow=c(2,2))
+plot(lm2)
+```
+#### Cook's distance and outliers
+```{r}
+cooksD <- cooks.distance(lm2)
+cooksD
+```
+
+### Model 3: log(response) and transformed predictors
+```{r}
+# Box-cox transformation
+sapply(songs_clean[, c("streams", "bpm", "danceability_pct", "valence_pct", "energy_pct", 
+                       "acousticness_pct", "instrumentalness_pct", 
+                       "liveness_pct", "speechiness_pct")], 
+       function(x) sum(x <= 0))
+
+predictors_subset <- songs_clean[, c("bpm", "danceability_pct", "valence_pct", "energy_pct", 
+                                     "acousticness_pct", "instrumentalness_pct", 
+                                     "liveness_pct", "speechiness_pct")]
+
+predictors_subset$acousticness_pct <- predictors_subset$acousticness_pct + 1e-6
+predictors_subset$instrumentalness_pct <- predictors_subset$instrumentalness_pct + 1e-6
+
+sapply(predictors_subset[, c("bpm", "danceability_pct", "valence_pct", "energy_pct", 
+                       "acousticness_pct", "instrumentalness_pct", 
+                       "liveness_pct", "speechiness_pct")], 
+       function(x) sum(x <= 0))
+
+songs_transformed <- songs_clean %>%
+  mutate(
+    bpm_bc = bpm^0.2465,
+    danceability_bc = danceability_pct^1.6307,
+    valence_bc = valence_pct^0.8023,
+    energy_bc = energy_pct^1.3468,
+    acousticness_bc = acousticness_pct^0.3204,
+    instrumentalness_bc = 1 / (instrumentalness_pct^0.6938),
+    liveness_bc = 1 / (liveness_pct^0.3416),
+    speechiness_bc = 1 / (speechiness_pct^0.6286)
+  )
+```
+
+```{r}
+lm3 <- lm(
+  log(streams) ~ 
+    (bpm^0.2465) + 
+    key + 
+    mode + 
+    (danceability_pct^1.6307) + 
+    (valence_pct^0.8023) + 
+    (energy_pct^1.3468) + 
+    (acousticness_pct^0.3204) + 
+    (1 / (instrumentalness_pct^0.6938)) + 
+    (1 / (liveness_pct^0.3416)) + 
+    (1 / (speechiness_pct^0.6286)),
+  data = songs_clean
+)
+```
+
+```{r}
+lm3 <- lm(log(streams) ~ bpm^0.2465 + key + mode + danceability_pct^1.6307 + valence_pct^0.8023 + energy_pct^1.3468 + acousticness_pct^0.3204 + 1/(instrumentalness_pct^0.6938) + 1/(liveness_pct^0.3416) + 1/(speechiness_pct^0.6386), data=predictors_subset)
+summary(lm3)
+```
+
+#### Look at outliers
+```{r}
+songs_clean[c(56, 179, 618, 700:710),]
+```
+
+```{r}
+cooksdist <- 4/(951)
+cooksdist
 ```
 
 ### Model 2: Multiple Linear Regression with Select Interactions
